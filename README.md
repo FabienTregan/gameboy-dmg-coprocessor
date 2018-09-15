@@ -104,3 +104,22 @@ unrolled_loop:
 ...
 ```
 We now go down to 12+16=28 cycles per byte pair, 14 cycles per byte from 22 ! With 4 pixels per byte, that mean 3.5 cycles per pixel (we started at 6). At 70224 cycles per frame, we can move 20064 pixels per frame, or 87% of the screen.
+
+### More realistic calculation
+
+87% o the screen is nearly eanough : we could just leave 6% of blank lines at the bottom and top of the screen hand be happy with that. But if you remember earlyer we told about time when the VRAM could not be accessed by the CPU because it was used to sget data to be send to the LCD driver. The process goes like this :
+* We start in mode 0 (also, called H-BLANK), during which the LCD drivers display a line and already has the data is needs. This last for 201 to 207.
+* We follow with mode 2, when the drivers needs to acces OAM ram (the one which contains data about the sprite and that the DMA can write to), during this time (77 to 83 cycles) we still can access VRAM
+* Then follows mode 3, when the drivers loads data to draw next line, and we can't acces neither VRAM nor OAM for 169 to 175 cycles
+This repeats for the 144 lines,  then inally some free time (called mode 2 or V-BLANK) lasts before the next frame is sent to the LCD for  4560 cycles. We cann access bot VRAM and OAM during V-BLANK
+
+So, with 28 cycles for 2 bytes, during each line we can be sure to have at least 201 (mode 0) plus 77 (mode 2) cycles to access the VRAM. This means (201+77)/28=9 pairs of bytes (very close to 10). We can tranfer 18 bytes per line. With 144 lines that means 2592 bytes or 10368 pixels.
+Then during V-BLANK, we have 4560 cycles to transfer 162 pairs of bytes, that's 1296 more pixels.
+Total is 10368+1296=11664, that's only 50.6% of the screen. Maybe we can manage to move 19 instead of 18 bytes per lines, adding 4x144 pixels, for 53.1% of the screen.
+
+Of course, with a gameboy color, things would be way better :
+-CPU can be run at double speed (106% of the screen)
+-The DMA can access the VRAM, and it can transfert nearly 1 pixel per cycle (with twice the number of cycles).
+But the GBC is less iconic than the DMG GB. And -I found while looking for technical info for this project- Anders Granlund already made a [coprocessor for the GBC](http://www.happydaze.se/wolf/)
+
+So, can we gain something more ?
