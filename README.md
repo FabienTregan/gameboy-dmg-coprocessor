@@ -12,6 +12,7 @@ But if you emulate ram and rom with an mcu, can you emulate a rom containing fra
 ## Challenge of transfering the picture from cartridge to video ram at 60 frames per second
 
 The gameboy is able to display 60 fps. It displays 144 rows of 160 pixels. We want to send it 1382400 pixels per second. Each pixel has four possibles colors, hence is coded on two bits, we want to transfert 2764800 bits, or 345600 bytes per second.
+
 The CPU runs at 4.19MHz (it's clock ticks 4.190.000 times per second), and it usually needs 4 or 8 ticks (we all them *cycles*) to do most things. The LCD screen is refresh every 70224 cycles. We want to transfer a new frame in less than 70224 cycles to have maximum fluidity.
 
 ### Simple copy from ROM to VRAM
@@ -39,6 +40,7 @@ loop:
   jz  nz, loop             ; 12 cycles
 ```
   The loop takes 44 cycles and copies one byte (8 bits, 4 pixels), i.e. 11 cycles per pixel. At this rate, copying a full frame of 160x144 pixels would take 253440 cycles. The screen is refreshed every 70224 cycles. This is currently 3.6 times to slow (we can refresh only 28% o the screen on each frame).
+  
   In reality, this is even less because :
 1. While the gameboy is reading the video ram to send data to the LCD screen, the cpu can not access it. We need to be faster. (more on this later)
 1. Only addresses from $0000 to $7FFF (for the ROM), $A000 to $BFFF (for the external ram, the one on the cartridge). That means we can only loop over 32768 bytes (32KB) of data, then we have to send the cartridge some command so it switch the current *bank* (chunk of 16k of data which is currently exposed to the processor through the address range $4000-$7FFFF)  And we need to transfert more than 44KB of picture per frame, and the code for this is also in the ROM and needs to be addressable, then at some point we will have to switch the bank.
@@ -114,6 +116,7 @@ We now go down to 12+16=28 cycles per byte pair, 14 cycles per byte from 22 ! Wi
 This repeats for the 144 lines,  then inally some free time (called mode 2 or V-BLANK) lasts before the next frame is sent to the LCD for  4560 cycles. We cann access bot VRAM and OAM during V-BLANK
 
 So, with 28 cycles for 2 bytes, during each line we can be sure to have at least 201 (mode 0) plus 77 (mode 2) cycles to access the VRAM. This means (201+77)/28=9 pairs of bytes (very close to 10). We can tranfer 18 bytes per line. With 144 lines that means 2592 bytes or 10368 pixels.
+
 Then during V-BLANK, we have 4560 cycles to transfer 162 pairs of bytes, that's 1296 more pixels.
 Total is 10368+1296=11664, that's only 50.6% of the screen. Maybe we can manage to move 19 instead of 18 bytes per lines, adding 4x144 pixels, for 53.1% of the screen.
 
@@ -124,8 +127,10 @@ But the GBC is less iconic than the DMG GB. And -I found while looking for techn
 
 So, can we gain something more ?
 
-### Weirder solutions
+### Mixing tiles and sprites
 
 When I first missread the specification of the DMA, I thought it would be able to transfert some image for the sprites. I then thought that using gameboy's sprites unstead of tiles could allow for faster DMA enabled transfer.
+
 The tiles are 8x8 pixels blocks which are positionned on a grid (they all are perfectly aligned on screen, even though the grid itsellf can scroll). Sprites get their images from the same memory array as the tiles, but can be positonned at any abitrary position on the screen, and have transparent pixels that let you see the tiles behind them.
+
 The gameboy can only handle 40 (8x8 pixels) sprites (or 20 of size 8x16), moreover it can only display 10 sprites per lines, covering only 10x80 pixel out of 160 on each line at max. I then thought I would have to mix sprites and tiles and use the DMA transfert for only half of the frame, but that would have been nice anyway.
