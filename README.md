@@ -123,3 +123,9 @@ Of course, with a gameboy color, things would be way better :
 But the GBC is less iconic than the DMG GB. And -I found while looking for technical info for this project- Anders Granlund already made a [coprocessor for the GBC](http://www.happydaze.se/wolf/)
 
 So, can we gain something more ?
+
+### Weirder solutions
+
+When I first missread the specification of the DMA, I thought it would be able to transfert some image for the sprites. I then thought that using gameboy's sprites unstead of tiles could allow for faster DMA enabled transfer.
+The tiles are 8x8 pixels blocks which are positionned on a grid (they all are perfectly aligned on screen, even though the grid itsellf can scroll). Sprites get their images from the same memory array as the tiles, but can be positonned at any abitrary position on the screen, and have transparent pixels that let you see the tiles behind them.
+The gameboy can only handle 40 (8x8 pixels) sprites (or 20 of size 8x16), moreover it can only display 10 sprites per lines, covering only 10x80 pixel out of 160 on each line at max. I then thought I would have to mix sprites and tiles and use the DMA transfert for only half of the frame, but that would have been nice anyway.
